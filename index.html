@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis — Sistemas ToDo Arquitecturas Distribuidas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #0f1923;
+  --paper:  #f7f0ef;
+  --cream:  #ede9e1;
+  --blue:   #1a5f8a;
+  --green:  #1a7a4a;
+  --red:    #b03030;
+  --orange: #c96a1a;
+  --purple: #5a2a7a;
+  --gold:   #c8960a;
+  --muted:  #6b7280;
+  --light:  #ffffff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* ── PRINT ── */
+@media print {
+  .nav-tabs, .tab-btn { display: none !important; }
+  .tab-panel { display: block !important; page-break-after: always; }
+  body { background: rgb(255, 255, 255); }
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--ink);
+  display: flex; align-items: center; gap: 0;
+  padding: 0 2rem;
+  box-shadow: 0 2px 20px rgba(0,0,0,.3);
+}
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem; color: #fff;
+  padding: 1rem 1.5rem 1rem 0;
+  border-right: 1px solid #ffffff20;
+  margin-right: 1rem;
+  white-space: nowrap;
+}
+.tab-btn {
+  padding: .9rem 1.4rem;
+  background: none; border: none;
+  color: #ffffff80; font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: .8rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: color .2s, border-color .2s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: #ffffffcc; }
+.tab-btn.active { color: #fff; border-bottom-color: var(--gold); }
+
+/* ── PANELS ── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── HERO ── */
+.hero {
+  background: var(--ink);
+  padding: 4rem 4rem 3rem;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent, transparent 40px,
+    rgba(255,255,255,.015) 40px, rgba(255,255,255,.015) 41px
+  );
+}
+.hero-eyebrow {
+  font-size: .7rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--gold); font-weight: 700; margin-bottom: .8rem;
+}
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  color: #fff; line-height: 1.15; margin-bottom: 1rem;
+}
+.hero-sub {
+  font-size: .95rem; color: #ffffff80; max-width: 600px;
+  font-weight: 300; margin-bottom: 2rem;
+}
+.hero-tags { display: flex; gap: .6rem; flex-wrap: wrap; }
+.tag {
+  padding: .35rem .9rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+}
+.tag-blue   { background: var(--blue);   color: #fff; }
+.tag-green  { background: var(--green);  color: #fff; }
+.tag-orange { background: var(--orange); color: #fff; }
+.tag-purple { background: var(--purple); color: #fff; }
+.tag-gold   { background: var(--gold);   color: #fff; }
+
+/* ── CONTENT ── */
+.content { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem 4rem; }
+
+/* ── SECTION TITLE ── */
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem; color: var(--ink);
+  margin-bottom: .3rem;
+  display: flex; align-items: center; gap: .8rem;
+}
+.section-title .num {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: .9rem; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.section-lead {
+  font-size: .95rem; color: var(--muted);
+  max-width: 700px; margin-bottom: 2.5rem;
+  padding-left: 3.2rem;
+}
+
+/* ── SUBSECTION ── */
+.subsection { margin-bottom: 2.5rem; }
+.sub-title {
+  font-size: 1rem; font-weight: 700; color: var(--ink);
+  margin-bottom: 1rem;
+  display: flex; align-items: center; gap: .6rem;
+}
+.sub-title::before {
+  content: '';
+  width: 4px; height: 18px; border-radius: 2px;
+  background: var(--gold); flex-shrink: 0;
+}
+
+/* ── TABLES ── */
+.tbl-wrap { overflow-x: auto; margin-bottom: 1rem; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+thead tr { background: var(--ink); color: #fff; }
+thead th {
+  padding: .75rem 1rem; text-align: left;
+  font-weight: 700; letter-spacing: .03em; font-size: .78rem;
+}
+tbody tr:nth-child(even) { background: var(--cream); }
+tbody tr:hover { background: #e8e4db; }
+tbody td { padding: .65rem 1rem; border-bottom: 1px solid #e0dbd2; vertical-align: top; }
+.check { color: var(--green); font-weight: 700; }
+.badge {
+  display: inline-block; padding: .2rem .6rem; border-radius: 4px;
+  font-size: .7rem; font-weight: 700;
+}
+.badge-green  { background: #d1fae5; color: var(--green); }
+.badge-blue   { background: #dbeafe; color: var(--blue); }
+.badge-orange { background: #fed7aa; color: var(--orange); }
+.badge-red    { background: #fee2e2; color: var(--red); }
+.badge-purple { background: #ede9fe; color: var(--purple); }
+
+/* ── RESULT BOX ── */
+.result-box {
+  padding: 1.5rem 2rem;
+  border-radius: 10px;
+  display: flex; align-items: flex-start; gap: 1.2rem;
+  margin-top: 1.5rem;
+}
+.result-icon { font-size: 2rem; flex-shrink: 0; margin-top: .1rem; }
+.result-title { font-weight: 700; font-size: 1.1rem; margin-bottom: .4rem; }
+.result-body  { font-size: .88rem; line-height: 1.6; }
+.result-green  { background: #d1fae5; border-left: 5px solid var(--green); }
+.result-green  .result-title { color: var(--green); }
+.result-blue   { background: #dbeafe; border-left: 5px solid var(--blue); }
+.result-blue   .result-title { color: var(--blue); }
+
+/* ── FODA ── */
+.foda-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: #d0ccc4;
+  border: 1px solid #d0ccc4; border-radius: 10px;
+  overflow: hidden; margin-bottom: 1rem;
+}
+.foda-cell { background: var(--light); padding: 1.2rem 1.4rem; }
+.foda-header {
+  font-size: .75rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; margin-bottom: .8rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.foda-dot { width: 10px; height: 10px; border-radius: 50%; }
+.foda-item {
+  font-size: .85rem; color: var(--ink); padding: .25rem 0;
+  padding-left: 1rem; position: relative;
+}
+.foda-item::before {
+  content: '▸'; position: absolute; left: 0;
+  color: var(--muted); font-size: .7rem;
+}
+
+/* ── RIESGO ── */
+.riesgo-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem; margin-bottom: 1rem;
+}
+.riesgo-card {
+  background: var(--light); border: 1px solid #e0dbd2;
+  border-radius: 8px; padding: 1rem 1.2rem;
+  border-top: 4px solid var(--muted);
+}
+.riesgo-card.high   { border-top-color: var(--red); }
+.riesgo-card.medium { border-top-color: var(--orange); }
+.riesgo-card.low    { border-top-color: var(--green); }
+.riesgo-title  { font-weight: 700; font-size: .85rem; margin-bottom: .5rem; }
+.riesgo-meta   { display: flex; gap: .4rem; margin-bottom: .5rem; flex-wrap: wrap; }
+.riesgo-mit    { font-size: .78rem; color: var(--muted); font-style: italic; }
+
+/* ── SISTEMAS ── */
+.sistemas-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.sistema-card {
+  background: var(--light); border: 1px solid #e0dbd2;
+  border-radius: 10px; padding: 1.2rem 1.4rem;
+  border-left: 5px solid var(--blue);
+  transition: transform .2s, box-shadow .2s;
+}
+.sistema-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+.sistema-num  { font-size: .7rem; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+.sistema-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; margin: .3rem 0 .6rem; }
+.sistema-arch { font-size: .78rem; color: var(--blue); font-weight: 600; margin-bottom: .5rem; }
+.sistema-col  { font-size: .75rem; color: var(--muted); font-family: monospace; }
+
+/* ── CANVAS ── */
+.canvas-wrap  { overflow-x: auto; }
+.canvas-grid  {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 3px;
+  background: #c8c4bc;
+  border: 3px solid #c8c4bc;
+  border-radius: 12px; overflow: hidden;
+  min-width: 800px;
+}
+.canvas-cell {
+  background: var(--light);
+  padding: 1rem 1.2rem;
+}
+.canvas-cell-title {
+  font-size: .65rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; margin-bottom: .7rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.canvas-icon { font-size: 1rem; }
+.canvas-item { font-size: .8rem; color: var(--ink); padding: .18rem 0; padding-left: .9rem; position: relative; }
+.canvas-item::before { content: '•'; position: absolute; left: 0; color: var(--muted); }
+
+/* Canvas spans */
+.c-socios     { grid-column: 1; grid-row: 1 / 3; }
+.c-actividades{ grid-column: 2; grid-row: 1; }
+.c-valor      { grid-column: 3; grid-row: 1 / 3; background: var(--ink) !important; }
+.c-valor .canvas-cell-title { color: var(--gold); }
+.c-valor .canvas-item { color: #e0ddd7; }
+.c-valor .canvas-item::before { color: var(--gold); }
+.c-relacion   { grid-column: 4; grid-row: 1; }
+.c-segmentos  { grid-column: 5; grid-row: 1 / 3; }
+.c-recursos   { grid-column: 2; grid-row: 2; }
+.c-canales    { grid-column: 4; grid-row: 2; }
+.c-costos     { grid-column: 1 / 3; grid-row: 3; }
+.c-ingresos   { grid-column: 3 / 6; grid-row: 3; }
+
+/* Colores por bloque */
+.c-socios     { border-top: 3px solid var(--blue); }
+.c-actividades{ border-top: 3px solid var(--green); }
+.c-relacion   { border-top: 3px solid var(--orange); }
+.c-segmentos  { border-top: 3px solid var(--purple); }
+.c-recursos   { border-top: 3px solid var(--blue); }
+.c-canales    { border-top: 3px solid var(--orange); }
+.c-costos     { border-top: 3px solid var(--red); }
+.c-ingresos   { border-top: 3px solid var(--green); }
+
+/* ── COSTS GRID ── */
+.costs-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-bottom: 1rem;
+}
+.cost-card {
+  background: var(--light); border: 1px solid #e0dbd2;
+  border-radius: 8px; padding: 1rem; text-align: center;
+}
+.cost-card .amount { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--green); }
+.cost-card .label  { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: #e0dbd2; margin: 2rem 0; }
+
+/* ── RESPONSIVE ── */
+@media(max-width:700px) {
+  .hero { padding: 2rem 1.5rem; }
+  .content { padding: 2rem 1rem; }
+  .foda-grid { grid-template-columns: 1fr; }
+  .costs-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">ToDo · Arquitecturas</div>
+  <button class="tab-btn active" onclick="showTab('factibilidad')">Factibilidad</button>
+  <button class="tab-btn" onclick="showTab('viabilidad')">Viabilidad</button>
+  <button class="tab-btn" onclick="showTab('canvas')">Canvas</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 1 — FACTIBILIDAD
+═══════════════════════════════════════════════════════ -->
+<div id="tab-factibilidad" class="tab-panel active">
+
+  <div class="hero">
+    <div class="hero-eyebrow">Análisis · Sección 1 de 3</div>
+    <h1 class="hero-title">Análisis de<br>Factibilidad</h1>
+    <p class="hero-sub">Evaluación de los recursos técnicos, operativos, económicos y temporales necesarios para llevar a cabo los 4 sistemas ToDo con arquitecturas distribuidas.</p>
+    <div class="hero-tags">
+      <span class="tag tag-blue">Node.js + Express</span>
+      <span class="tag tag-green">Firebase Firestore</span>
+      <span class="tag tag-orange">4 Arquitecturas</span>
+      <span class="tag tag-gold">$0.00 Costo</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="section-title">
+      <span class="num" style="background:var(--blue)">1</span>
+      Factibilidad Técnica
+    </div>
+    <p class="section-lead">Verificación de que todas las herramientas y tecnologías requeridas están disponibles y son accesibles sin costo.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Componente</th>
+            <th>Tecnología</th>
+            <th>Costo</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Backend API</td><td>Node.js 20 + Express</td><td>Gratuito / Open Source</td><td><span class="check">✓ Disponible</span></td></tr>
+          <tr><td>Base de Datos</td><td>Firebase Firestore</td><td>Plan Spark (gratuito)</td><td><span class="check">✓ Disponible</span></td></tr>
+          <tr><td>Frontend</td><td>HTML5 / CSS3 / JavaScript</td><td>Sin dependencias</td><td><span class="check">✓ Disponible</span></td></tr>
+          <tr><td>Control de versiones</td><td>Git + GitHub</td><td>Gratuito</td><td><span class="check">✓ Disponible</span></td></tr>
+          <tr><td>Despliegue local</td><td>localhost (cualquier PC)</td><td>Sin costo</td><td><span class="check">✓ Disponible</span></td></tr>
+          <tr><td>Despliegue en nube</td><td>Railway / Render</td><td>Plan gratuito disponible</td><td><span class="check">✓ Disponible</span></td></tr>
+          <tr><td>Gestor de paquetes</td><td>npm (Node Package Manager)</td><td>Incluido con Node.js</td><td><span class="check">✓ Disponible</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">
+      <span class="num" style="background:var(--green)">2</span>
+      Factibilidad Operativa
+    </div>
+    <p class="section-lead">Evaluación de la capacidad del equipo de desarrollo para operar e implementar los sistemas.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Aspecto</th><th>Descripción</th><th>Nivel requerido</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Conocimiento técnico</td><td>JavaScript / Node.js / REST APIs</td><td><span class="badge badge-orange">Intermedio</span></td></tr>
+          <tr><td>Firebase Console</td><td>Crear proyecto, descargar credenciales JSON</td><td><span class="badge badge-green">Básico</span></td></tr>
+          <tr><td>Terminal / PowerShell</td><td>Ejecutar <code>npm install</code> y <code>node server.js</code></td><td><span class="badge badge-green">Básico</span></td></tr>
+          <tr><td>Navegador web</td><td>Abrir archivos HTML y conectar al backend</td><td><span class="badge badge-green">Básico</span></td></tr>
+          <tr><td>Mantenimiento</td><td>El sistema corre localmente, sin infraestructura a gestionar</td><td><span class="badge badge-green">Mínimo</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">
+      <span class="num" style="background:var(--orange)">3</span>
+      Factibilidad Económica
+    </div>
+    <p class="section-lead">Detalle de costos asociados al proyecto.</p>
+
+    <div class="costs-row">
+      <div class="cost-card">
+        <div class="amount">$0</div>
+        <div class="label">Firebase Firestore<br>(Plan Spark)</div>
+      </div>
+      <div class="cost-card">
+        <div class="amount">$0</div>
+        <div class="label">Node.js + npm<br>(Open Source)</div>
+      </div>
+      <div class="cost-card">
+        <div class="amount">$0</div>
+        <div class="label">Railway / Render<br>(Plan gratuito)</div>
+      </div>
+      <div class="cost-card">
+        <div class="amount">$0</div>
+        <div class="label">GitHub<br>(Plan gratuito)</div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Recurso</th><th>Costo mensual</th><th>Límite gratuito</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Firebase Firestore (Spark)</td><td><strong>$0.00</strong></td><td>50,000 lecturas/día · 20,000 escrituras/día</td></tr>
+          <tr><td>Node.js ejecución local</td><td><strong>$0.00</strong></td><td>Sin límite</td></tr>
+          <tr><td>Railway hosting</td><td><strong>$0.00</strong></td><td>500 horas/mes · 512 MB RAM</td></tr>
+          <tr><td>GitHub repositorio</td><td><strong>$0.00</strong></td><td>Repositorios privados ilimitados</td></tr>
+          <tr><td>Equipo de cómputo</td><td><strong>Ya disponible</strong></td><td>Sin costo adicional</td></tr>
+          <tr style="background:#d1fae5"><td><strong>TOTAL DEL PROYECTO</strong></td><td><strong style="color:var(--green)">$0.00 / mes</strong></td><td>100% gratuito para uso académico</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">
+      <span class="num" style="background:var(--purple)">4</span>
+      Factibilidad de Tiempo
+    </div>
+    <p class="section-lead">Cronograma estimado para el desarrollo completo de los 4 sistemas.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Fase</th><th>Actividades</th><th>Duración</th><th>Entregables</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-blue">Fase 1</span></td>
+            <td>Diseño de arquitecturas y estructura de BD en Firestore</td>
+            <td>1 semana</td>
+            <td>Diagrama de arquitecturas, colecciones Firestore</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">Fase 2</span></td>
+            <td>Desarrollo de los 4 backends Node.js + integración Firestore</td>
+            <td>2 semanas</td>
+            <td>4 APIs REST funcionales con SOLID/DRY/KISS</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">Fase 3</span></td>
+            <td>Desarrollo de los 4 frontends HTML/JS con conexión al backend</td>
+            <td>1 semana</td>
+            <td>4 interfaces web funcionales</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">Fase 4</span></td>
+            <td>Pruebas de integración, documentación y despliegue</td>
+            <td>1 semana</td>
+            <td>Sistemas probados + documentación técnica</td>
+          </tr>
+          <tr style="background:#dbeafe">
+            <td><strong>Total</strong></td>
+            <td><strong>Proyecto completo</strong></td>
+            <td><strong>5 semanas</strong></td>
+            <td><strong>4 sistemas funcionando con Firestore</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="result-box result-green">
+      <div class="result-icon">✅</div>
+      <div>
+        <div class="result-title">RESULTADO: PROYECTO FACTIBLE</div>
+        <div class="result-body">El proyecto es técnicamente factible dado que todas las tecnologías requeridas son gratuitas y de código abierto. Operativamente es viable con conocimientos básicos de Node.js y Firebase. Económicamente no representa ningún costo para un entorno académico. El tiempo estimado de 5 semanas es razonable para el alcance definido de 4 sistemas con arquitecturas distribuidas distintas.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 2 — VIABILIDAD
+═══════════════════════════════════════════════════════ -->
+<div id="tab-viabilidad" class="tab-panel">
+
+  <div class="hero" style="background:linear-gradient(135deg, #1a3a5c 0%, #0f1923 100%)">
+    <div class="hero-eyebrow">Análisis · Sección 2 de 3</div>
+    <h1 class="hero-title">Análisis de<br>Viabilidad</h1>
+    <p class="hero-sub">Evaluación de las posibilidades reales de éxito del proyecto considerando fortalezas, riesgos, oportunidades y el valor que aporta.</p>
+    <div class="hero-tags">
+      <span class="tag tag-green">FODA Completo</span>
+      <span class="tag tag-blue">Análisis de Riesgos</span>
+      <span class="tag tag-orange">4 Sistemas Evaluados</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="section-title">
+      <span class="num" style="background:var(--blue)">1</span>
+      Descripción del Proyecto
+    </div>
+    <p class="section-lead">Ficha técnica del proyecto evaluado.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Campo</th><th>Detalle</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Nombre</strong></td><td>4 Sistemas ToDo con Arquitecturas Distribuidas</td></tr>
+          <tr><td><strong>Tipo</strong></td><td>Proyecto académico / Demostración de patrones arquitectónicos</td></tr>
+          <tr><td><strong>Objetivo</strong></td><td>Demostrar 4 patrones de arquitectura de software usando una aplicación ToDo como caso de uso unificado</td></tr>
+          <tr><td><strong>Arquitecturas</strong></td><td>Master/Slave · Peer-to-Peer (P2P) · Pipes &amp; Filters · Broker</td></tr>
+          <tr><td><strong>Stack tecnológico</strong></td><td>Node.js + Express (backend) · Firebase Firestore (BD) · HTML/CSS/JS (frontend)</td></tr>
+          <tr><td><strong>Principios aplicados</strong></td><td>SOLID · DRY · KISS · YAGNI · Clean Code</td></tr>
+          <tr><td><strong>Entorno de ejecución</strong></td><td>Local (localhost:3001–3004) con base de datos real en Firebase Cloud</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">
+      <span class="num" style="background:var(--green)">2</span>
+      Análisis FODA
+    </div>
+    <p class="section-lead">Fortalezas, Oportunidades, Debilidades y Amenazas del proyecto.</p>
+
+    <div class="foda-grid">
+      <div class="foda-cell">
+        <div class="foda-header" style="color:var(--green)">
+          <div class="foda-dot" style="background:var(--green)"></div>
+          Fortalezas
+        </div>
+        <div class="foda-item">Costo cero en todas las herramientas y servicios</div>
+        <div class="foda-item">Firebase ofrece base de datos en la nube gratuita</div>
+        <div class="foda-item">4 arquitecturas bien definidas y documentadas</div>
+        <div class="foda-item">Clean Code y principios SOLID/DRY/KISS aplicados</div>
+        <div class="foda-item">Portabilidad: corre en cualquier PC con Node.js</div>
+        <div class="foda-item">Frontend simple: solo doble clic para abrir</div>
+      </div>
+      <div class="foda-cell">
+        <div class="foda-header" style="color:var(--blue)">
+          <div class="foda-dot" style="background:var(--blue)"></div>
+          Oportunidades
+        </div>
+        <div class="foda-item">Escalar a despliegue en nube (Railway/Render) sin costo</div>
+        <div class="foda-item">Agregar autenticación con Firebase Auth</div>
+        <div class="foda-item">Extender a microservicios como 5ta arquitectura</div>
+        <div class="foda-item">Usar como plantilla base para proyectos más complejos</div>
+        <div class="foda-item">Integrar CI/CD con GitHub Actions</div>
+        <div class="foda-item">Publicar como recurso educativo open source</div>
+      </div>
+      <div class="foda-cell">
+        <div class="foda-header" style="color:var(--orange)">
+          <div class="foda-dot" style="background:var(--orange)"></div>
+          Debilidades
+        </div>
+        <div class="foda-item">Requiere Node.js instalado en cada PC nueva</div>
+        <div class="foda-item">La replicación P2P y Master/Slave es asíncrona simulada</div>
+        <div class="foda-item">Sin autenticación de usuarios en la versión actual</div>
+        <div class="foda-item">Depende de conexión a internet para Firestore</div>
+        <div class="foda-item">4 terminales abiertas para correr todos los sistemas</div>
+      </div>
+      <div class="foda-cell">
+        <div class="foda-header" style="color:var(--red)">
+          <div class="foda-dot" style="background:var(--red)"></div>
+          Amenazas
+        </div>
+        <div class="foda-item">Posibles cambios en los precios de Firebase</div>
+        <div class="foda-item">Cuotas gratuitas de Firestore pueden agotarse</div>
+        <div class="foda-item">Actualizaciones incompatibles en dependencias npm</div>
+        <div class="foda-item">Limitaciones de CORS en entornos restrictivos</div>
+        <div class="foda-item">Dependencia de servicios de terceros (Google)</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">
+      <span class="num" style="background:var(--red)">3</span>
+      Evaluación de Riesgos
+    </div>
+    <p class="section-lead">Riesgos identificados con su probabilidad, impacto y estrategia de mitigación.</p>
+
+    <div class="riesgo-grid">
+      <div class="riesgo-card high">
+        <div class="riesgo-title">Error en credenciales JSON</div>
+        <div class="riesgo-meta">
+          <span class="badge badge-orange">Prob: Media</span>
+          <span class="badge badge-red">Impacto: Alto</span>
+        </div>
+        <div class="riesgo-mit">Verificar que serviceAccountKey.json está en cada carpeta backend/</div>
+      </div>
+      <div class="riesgo-card high">
+        <div class="riesgo-title">PC sin Node.js instalado</div>
+        <div class="riesgo-meta">
+          <span class="badge badge-orange">Prob: Media</span>
+          <span class="badge badge-red">Impacto: Alto</span>
+        </div>
+        <div class="riesgo-mit">Instalar Node.js LTS desde nodejs.org antes de ejecutar</div>
+      </div>
+      <div class="riesgo-card medium">
+        <div class="riesgo-title">Conflicto de puertos locales</div>
+        <div class="riesgo-meta">
+          <span class="badge badge-orange">Prob: Media</span>
+          <span class="badge badge-orange">Impacto: Medio</span>
+        </div>
+        <div class="riesgo-mit">Cambiar el PORT con variable de entorno al correr cada servidor</div>
+      </div>
+      <div class="riesgo-card medium">
+        <div class="riesgo-title">Cuota Firestore agotada</div>
+        <div class="riesgo-meta">
+          <span class="badge badge-green">Prob: Baja</span>
+          <span class="badge badge-red">Impacto: Alto</span>
+        </div>
+        <div class="riesgo-mit">Monitorear en Firebase Console → Uso y facturación</div>
+      </div>
+      <div class="riesgo-card low">
+        <div class="riesgo-title">Cambio de API de Firestore</div>
+        <div class="riesgo-meta">
+          <span class="badge badge-green">Prob: Muy Baja</span>
+          <span class="badge badge-orange">Impacto: Medio</span>
+        </div>
+        <div class="riesgo-mit">Fijar versión de firebase-admin en package.json</div>
+      </div>
+      <div class="riesgo-card low">
+        <div class="riesgo-title">Sin conexión a internet</div>
+        <div class="riesgo-meta">
+          <span class="badge badge-green">Prob: Baja</span>
+          <span class="badge badge-orange">Impacto: Medio</span>
+        </div>
+        <div class="riesgo-mit">Usar Firebase Emulator Suite para desarrollo offline</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">
+      <span class="num" style="background:var(--purple)">4</span>
+      Viabilidad por Sistema
+    </div>
+    <p class="section-lead">Evaluación individual de cada sistema desarrollado.</p>
+
+    <div class="sistemas-grid">
+      <div class="sistema-card" style="border-left-color:var(--blue)">
+        <div class="sistema-num">Sistema 01</div>
+        <div class="sistema-name">Master / Slave</div>
+        <div class="sistema-arch">Replicación de base de datos</div>
+        <div style="margin-bottom:.5rem">
+          <span class="badge badge-blue">Complejidad: Media</span>
+        </div>
+        <div class="sistema-col">tasks_master<br>tasks_slave1<br>tasks_slave2</div>
+        <div style="margin-top:.7rem"><span class="badge badge-green">✓ VIABLE</span></div>
+      </div>
+      <div class="sistema-card" style="border-left-color:var(--green)">
+        <div class="sistema-num">Sistema 02</div>
+        <div class="sistema-name">Peer-to-Peer</div>
+        <div class="sistema-arch">Red descentralizada P2P</div>
+        <div style="margin-bottom:.5rem">
+          <span class="badge badge-orange">Complejidad: Media-Alta</span>
+        </div>
+        <div class="sistema-col">tasks_peer_alpha<br>tasks_peer_beta<br>tasks_peer_gamma<br>tasks_peer_delta</div>
+        <div style="margin-top:.7rem"><span class="badge badge-green">✓ VIABLE</span></div>
+      </div>
+      <div class="sistema-card" style="border-left-color:var(--orange)">
+        <div class="sistema-num">Sistema 03</div>
+        <div class="sistema-name">Pipes &amp; Filters</div>
+        <div class="sistema-arch">Pipeline de transformación</div>
+        <div style="margin-bottom:.5rem">
+          <span class="badge badge-green">Complejidad: Baja</span>
+        </div>
+        <div class="sistema-col">tasks_pipes</div>
+        <div style="margin-top:.7rem"><span class="badge badge-green">✓ VIABLE</span></div>
+      </div>
+      <div class="sistema-card" style="border-left-color:var(--purple)">
+        <div class="sistema-num">Sistema 04</div>
+        <div class="sistema-name">Broker</div>
+        <div class="sistema-arch">Intermediario de servicios</div>
+        <div style="margin-bottom:.5rem">
+          <span class="badge badge-blue">Complejidad: Media</span>
+        </div>
+        <div class="sistema-col">tasks_server1<br>tasks_server2<br>tasks_server3</div>
+        <div style="margin-top:.7rem"><span class="badge badge-green">✓ VIABLE</span></div>
+      </div>
+    </div>
+
+    <div class="result-box result-blue" style="margin-top:2rem">
+      <div class="result-icon">🔵</div>
+      <div>
+        <div class="result-title">RESULTADO: PROYECTO VIABLE</div>
+        <div class="result-body">Los 4 sistemas son viables tanto técnica como operativamente. El uso de Firebase Firestore garantiza persistencia real de datos sin costo alguno. Los riesgos identificados tienen mitigaciones claras y de bajo esfuerzo. El proyecto aporta valor académico significativo al demostrar 4 patrones arquitectónicos distintos sobre el mismo caso de uso (ToDo List), facilitando la comparación directa y la comprensión profunda de cada arquitectura en la práctica.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 3 — CANVAS
+═══════════════════════════════════════════════════════ -->
+<div id="tab-canvas" class="tab-panel">
+
+  <div class="hero" style="background:linear-gradient(135deg, #2a1a4a 0%, #0f1923 100%)">
+    <div class="hero-eyebrow">Análisis · Sección 3 de 3</div>
+    <h1 class="hero-title">Modelo Canvas<br>del Negocio</h1>
+    <p class="hero-sub">Los 9 bloques del Business Model Canvas aplicados a los sistemas ToDo con visión de producto y potencial de escalabilidad comercial.</p>
+    <div class="hero-tags">
+      <span class="tag tag-purple">9 Bloques Canvas</span>
+      <span class="tag tag-gold">Visión de Producto</span>
+      <span class="tag tag-green">Costo Inicial $0</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="section-title">
+      <span class="num" style="background:var(--purple)">◈</span>
+      Business Model Canvas
+    </div>
+    <p class="section-lead">Aunque es un proyecto académico, se analiza con visión de producto para evaluar su potencial de escalabilidad real.</p>
+
+    <div class="canvas-wrap">
+      <div class="canvas-grid">
+
+        <!-- SOCIOS CLAVE -->
+        <div class="canvas-cell c-socios">
+          <div class="canvas-cell-title" style="color:var(--blue)">
+            <span class="canvas-icon">🤝</span> Socios Clave
+          </div>
+          <div class="canvas-item">Google Firebase (BD gratuita en la nube)</div>
+          <div class="canvas-item">GitHub (control de versiones y colaboración)</div>
+          <div class="canvas-item">Railway / Render (hosting gratuito)</div>
+          <div class="canvas-item">Comunidad Node.js / npm (ecosistema)</div>
+          <div class="canvas-item">Docentes y evaluadores académicos</div>
+          <div class="canvas-item">Contribuidores open source</div>
+        </div>
+
+        <!-- ACTIVIDADES CLAVE -->
+        <div class="canvas-cell c-actividades">
+          <div class="canvas-cell-title" style="color:var(--green)">
+            <span class="canvas-icon">⚙️</span> Actividades Clave
+          </div>
+          <div class="canvas-item">Desarrollo de 4 APIs REST con Node.js</div>
+          <div class="canvas-item">Implementación de patrones arquitectónicos</div>
+          <div class="canvas-item">Integración con Firebase Firestore</div>
+          <div class="canvas-item">Aplicación de principios SOLID/DRY/KISS</div>
+          <div class="canvas-item">Documentación técnica detallada</div>
+        </div>
+
+        <!-- PROPUESTA DE VALOR -->
+        <div class="canvas-cell c-valor">
+          <div class="canvas-cell-title">
+            <span class="canvas-icon">💎</span> Propuesta de Valor
+          </div>
+          <div class="canvas-item">4 implementaciones del mismo problema con distintas arquitecturas para comparar directamente</div>
+          <div class="canvas-item">Base de datos real en la nube (Firestore) sin costo</div>
+          <div class="canvas-item">Código limpio con principios de ingeniería de software</div>
+          <div class="canvas-item">Portable: corre en cualquier PC con Node.js</div>
+          <div class="canvas-item">Educativo: comprensión práctica de arquitecturas distribuidas</div>
+          <div class="canvas-item">Escalable hacia producto comercial real</div>
+        </div>
+
+        <!-- RELACIÓN CON CLIENTES -->
+        <div class="canvas-cell c-relacion">
+          <div class="canvas-cell-title" style="color:var(--orange)">
+            <span class="canvas-icon">💬</span> Relación con Clientes
+          </div>
+          <div class="canvas-item">Documentación paso a paso</div>
+          <div class="canvas-item">Código comentado con principios</div>
+          <div class="canvas-item">Frontend con feedback visual en tiempo real</div>
+          <div class="canvas-item">Soporte vía GitHub Issues</div>
+        </div>
+
+        <!-- SEGMENTOS -->
+        <div class="canvas-cell c-segmentos">
+          <div class="canvas-cell-title" style="color:var(--purple)">
+            <span class="canvas-icon">👥</span> Segmentos de Clientes
+          </div>
+          <div class="canvas-item">Estudiantes de ingeniería de software</div>
+          <div class="canvas-item">Docentes universitarios de arquitecturas</div>
+          <div class="canvas-item">Desarrolladores aprendiendo patrones</div>
+          <div class="canvas-item">Equipos de desarrollo evaluando arquitecturas</div>
+          <div class="canvas-item">Empresas en proceso de modernización</div>
+        </div>
+
+        <!-- RECURSOS CLAVE -->
+        <div class="canvas-cell c-recursos">
+          <div class="canvas-cell-title" style="color:var(--blue)">
+            <span class="canvas-icon">🔧</span> Recursos Clave
+          </div>
+          <div class="canvas-item">Node.js + Express (backend framework)</div>
+          <div class="canvas-item">Firebase Firestore (base de datos nube)</div>
+          <div class="canvas-item">HTML/CSS/JS (frontend sin frameworks)</div>
+          <div class="canvas-item">PC con acceso a internet</div>
+          <div class="canvas-item">Conocimiento en JS y REST APIs</div>
+        </div>
+
+        <!-- CANALES -->
+        <div class="canvas-cell c-canales">
+          <div class="canvas-cell-title" style="color:var(--orange)">
+            <span class="canvas-icon">📡</span> Canales
+          </div>
+          <div class="canvas-item">Repositorio GitHub (código fuente)</div>
+          <div class="canvas-item">Archivos HTML (frontend directo)</div>
+          <div class="canvas-item">Railway/Render (URL pública)</div>
+          <div class="canvas-item">Presentación académica</div>
+        </div>
+
+        <!-- ESTRUCTURA DE COSTOS -->
+        <div class="canvas-cell c-costos">
+          <div class="canvas-cell-title" style="color:var(--red)">
+            <span class="canvas-icon">💰</span> Estructura de Costos
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.3rem">
+            <div>
+              <div class="canvas-item">Firebase Firestore Plan Spark: <strong>$0.00/mes</strong></div>
+              <div class="canvas-item">Node.js + dependencias npm: <strong>$0.00</strong></div>
+            </div>
+            <div>
+              <div class="canvas-item">Railway hosting plan gratuito: <strong>$0.00/mes</strong></div>
+              <div class="canvas-item">GitHub repositorio privado: <strong>$0.00</strong></div>
+            </div>
+          </div>
+          <div style="margin-top:.7rem;padding:.5rem .8rem;background:#fee2e2;border-radius:6px;font-size:.82rem;font-weight:700;color:var(--red);display:inline-block">
+            COSTO TOTAL: $0.00 USD / mes
+          </div>
+        </div>
+
+        <!-- FUENTES DE INGRESOS -->
+        <div class="canvas-cell c-ingresos">
+          <div class="canvas-cell-title" style="color:var(--green)">
+            <span class="canvas-icon">📈</span> Fuentes de Ingresos
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.3rem">
+            <div>
+              <div style="font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em">Valor Académico</div>
+              <div class="canvas-item">Calificación y reconocimiento académico</div>
+              <div class="canvas-item">Aprendizaje de patrones arquitectónicos</div>
+              <div class="canvas-item">Base para tesis o proyectos de grado</div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em">Potencial Comercial</div>
+              <div class="canvas-item">Licenciar como plantilla de arquitecturas</div>
+              <div class="canvas-item">Consultoría técnica a equipos de desarrollo</div>
+              <div class="canvas-item">Extensión SaaS con autenticación y planes</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Resumen final -->
+    <div class="section-title">
+      <span class="num" style="background:var(--gold)">★</span>
+      Conclusión General
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1rem">
+      <div style="background:#d1fae5;border-radius:10px;padding:1.4rem;border-top:4px solid var(--green)">
+        <div style="font-weight:700;color:var(--green);margin-bottom:.6rem;font-size:.95rem">✅ Factibilidad</div>
+        <div style="font-size:.85rem;color:var(--ink);line-height:1.6">El proyecto es completamente factible. Todas las herramientas son gratuitas y el equipo cuenta con los conocimientos necesarios para implementarlo desde cero.</div>
+      </div>
+      <div style="background:#dbeafe;border-radius:10px;padding:1.4rem;border-top:4px solid var(--blue)">
+        <div style="font-weight:700;color:var(--blue);margin-bottom:.6rem;font-size:.95rem">🔵 Viabilidad</div>
+        <div style="font-size:.85rem;color:var(--ink);line-height:1.6">El proyecto es viable. Los 4 sistemas funcionan con Firebase Firestore como BD real en la nube. Los riesgos son bajos y tienen mitigaciones claras y ejecutables.</div>
+      </div>
+      <div style="background:#ede9fe;border-radius:10px;padding:1.4rem;border-top:4px solid var(--purple)">
+        <div style="font-weight:700;color:var(--purple);margin-bottom:.6rem;font-size:.95rem">◈ Modelo Canvas</div>
+        <div style="font-size:.85rem;color:var(--ink);line-height:1.6">El proyecto tiene valor educativo claro y potencial de escalabilidad hacia un producto comercial real, con costo inicial de $0 y una propuesta de valor diferenciada.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
